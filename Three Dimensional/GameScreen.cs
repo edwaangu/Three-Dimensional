@@ -102,8 +102,8 @@ namespace Three_Dimensional
         {
             InitializeComponent();
             planes.Add(new Plane3(new Point3[] { new Point3(50, -50, -50), new Point3(50, 50, -50), new Point3(50, 50, 50), new Point3(50, -50, 50) }));
-            planes.Add(new Plane3(new Point3[] { new Point3(-50, -50, -50), new Point3(50, 50, -50), new Point3(50, 50, 50), new Point3(-50, -50, 50) }));
-            planes.Add(new Plane3(new Point3[] { new Point3(-50, -50, -50), new Point3(-150, 50, -50), new Point3(-150, 50, 50), new Point3(-50, -50, 50) }));
+            //planes.Add(new Plane3(new Point3[] { new Point3(-50, -50, -50), new Point3(50, 50, -50), new Point3(50, 50, 50), new Point3(-50, -50, 50) }));
+            //planes.Add(new Plane3(new Point3[] { new Point3(-50, -50, -50), new Point3(-150, 50, -50), new Point3(-150, 50, 50), new Point3(-50, -50, 50) }));
             //planes.Add(new Plane3(new Point3[] { new Point3(-50, -50, 50), new Point3(50, 50, 50), new Point3(50, 50, 50), new Point3(50, -50, 50) }));
         }
 
@@ -114,12 +114,6 @@ namespace Three_Dimensional
 
         private void GameScreen_Paint(object sender, PaintEventArgs e)
         {
-            // 2D TOP DOWN MODE
-            if (mode == 2)
-            {
-                e.Graphics.TranslateTransform(450, 300);
-                e.Graphics.FillEllipse(new SolidBrush(Color.Black), -5 + Convert.ToSingle(p.x), -5 + Convert.ToSingle(p.y), 10, 10);
-            }
 
             double minfov = ((-fov - p.direction) + 90) % 360 - 90;
             double maxfov = ((fov - p.direction) + 90) % 360 - 90;
@@ -133,40 +127,38 @@ namespace Three_Dimensional
                 maxfov += 360;
             }
 
-            foreach (Plane3 pl in planes)
+            // 2D TOP DOWN MODE
+            if (mode == 2)
             {
-                PointF[] ps = new PointF[4];
-                for(int m = 0;m < pl.plist.Count();m++) {
-                    ps[m] = new PointF(pl.plist[m].x, pl.plist[m].y);
-                }
-                //PointF[] ps = { new PointF(pl.p1.x, pl.p1.y), new PointF(pl.p2.x, pl.p2.y), new PointF(pl.p3.x, pl.p3.y), new PointF(pl.p4.x, pl.p4.y) };
-                if (mode == 2)
+                e.Graphics.TranslateTransform(450, 300);
+                e.Graphics.FillEllipse(new SolidBrush(Color.Black), -5 + Convert.ToSingle(p.x), -5 + Convert.ToSingle(p.y), 10, 10);
+
+                foreach (Plane3 pl in planes)
                 {
+                    PointF[] ps = new PointF[4];
+                    for(int m = 0;m < pl.plist.Count();m++) {
+                        ps[m] = new PointF(pl.plist[m].x, pl.plist[m].y);
+                    }
+                    //PointF[] ps = { new PointF(pl.p1.x, pl.p1.y), new PointF(pl.p2.x, pl.p2.y), new PointF(pl.p3.x, pl.p3.y), new PointF(pl.p4.x, pl.p4.y) };
                     e.Graphics.DrawPolygon(new Pen(Color.Black), ps);
                     e.Graphics.FillPolygon(new SolidBrush(Color.Gray), ps);
-                }
 
-                // Red/Green lines
-                for (int i = 0; i < ps.Count(); i++)
-                {
-                    double dirFromPoint = directionFromPoint(p.x, p.y, ps[i].X, ps[i].Y); // Calculate direction from point
-                    double distFromPoint = distanceFromPoint(p.x, p.y, ps[i].X, ps[i].Y); // Calculate distance from point
-
-                    bool shouldBeShowing = shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov) != -1 ? true : false;
-
-
-                    if (mode == 2)
+                    // Red/Green lines
+                    for (int i = 0; i < ps.Count(); i++)
                     {
+                        double dirFromPoint = directionFromPoint(p.x, p.y, ps[i].X, ps[i].Y); // Calculate direction from point
+                        double distFromPoint = distanceFromPoint(p.x, p.y, ps[i].X, ps[i].Y); // Calculate distance from point
+
+                        bool shouldBeShowing = shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov) != -1 ? true : false;
+
+
                         e.Graphics.DrawLine(new Pen(Color.Red), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x) + Convert.ToSingle(zapdist * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(zapdist * Math.Cos(dirFromPoint)));
                         e.Graphics.DrawLine(new Pen(shouldBeShowing ? Color.LimeGreen : Color.DarkRed), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
 
                         e.Graphics.DrawString($"{dirFromPoint * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
                     }
                 }
-            }
-            // FOV Lines
-            if (mode == 2)
-            {
+                // FOV Lines
                 e.Graphics.DrawLine(new Pen(Color.DarkBlue, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x + zapdist * Math.Sin((-fov - p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((-fov - p.direction) / rad2Deg)));
                 e.Graphics.DrawLine(new Pen(Color.Blue, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x + zapdist * Math.Sin((fov - p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((fov - p.direction) / rad2Deg)));
 

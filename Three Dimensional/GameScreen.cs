@@ -35,6 +35,10 @@ namespace Three_Dimensional
          * 
          * 
          * Version History:
+         * v1.03:
+         * - Improved movement
+         * - Better insights into position of thing
+         * 
          * v1.02:
          * - This header comment
          * - Lots of comments added to the program for anyone who is interested in viewing, and for myself to remember what everything does.
@@ -102,7 +106,7 @@ namespace Three_Dimensional
             {
                 should = 1;
             }
-            if (pDir > (minfov) && pDir < (maxfov + 360) && maxfov < minfov) // When maximum fov is less than minimum fov and maximum fov is less than -90 (shouldn't happen, needs further testing)
+            if (pDir > (minfov) && pDir < (maxfov + 360) && maxfov < minfov) // When maximum fov is less than minimum fov and maximum fov is less than -90 (sometimes)
             {
                 should = 2;
             }
@@ -141,7 +145,7 @@ namespace Three_Dimensional
                 // Needs to be updated because it causes weird issues
                 whereShould = pDir > maxfov ? (1) : (-1);
             }
-            return whereShould;
+            return -whereShould;
         }
 
         public GameScreen()
@@ -205,7 +209,8 @@ namespace Three_Dimensional
                         e.Graphics.DrawLine(new Pen(shouldBeShowing ? Color.LimeGreen : Color.DarkRed), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
 
                         // Draw text displaying the direction of player and point
-                        e.Graphics.DrawString($"{dirFromPoint * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
+                        //e.Graphics.DrawString($"{dirFromPoint * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
+                        e.Graphics.DrawString($"{shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov)}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
                     }
                 }
 
@@ -233,6 +238,9 @@ namespace Three_Dimensional
                     // An array for the updated positions of points
                     PointF[] newPs = new PointF[4];
 
+                    // Check if this should show at all
+                    bool shouldShow = false;
+
                     // Calculate each point's position
                     for (int i = 0; i < pl.plist.Count(); i++)
                     {
@@ -242,15 +250,23 @@ namespace Three_Dimensional
                         // Calculate where the point should be positioned on the 3d screen
                         int theMode = shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov);
 
+                        if(theMode != -1)
+                        {
+                            shouldShow = true;
+                        }
+
                         // Position the updated point based on theMode, dirFromPoint, distFromPoint, and Z Coordinate of point (X-Y Axis, Z - up)
                         newPs[i] = new PointF(Convert.ToSingle(whereInFov(theMode, dirFromPoint * rad2Deg, minfov, maxfov)) * 450, -Convert.ToSingle((600 / (distFromPoint == 0 ? 0.001 : distFromPoint)) * pl.plist[i].z));
                     }
 
-                    // Add outline
-                    e.Graphics.DrawPolygon(new Pen(Color.Black), newPs);
-                    
-                    // Fill outline
-                    e.Graphics.FillPolygon(new SolidBrush(Color.Gray), newPs);
+                    if (shouldShow)
+                    {
+                        // Add outline
+                        e.Graphics.DrawPolygon(new Pen(Color.Black), newPs);
+
+                        // Fill outline
+                        e.Graphics.FillPolygon(new SolidBrush(Color.Gray), newPs);
+                    }
                 }
 
                 // Reset transform back to 0, 0
@@ -282,21 +298,25 @@ namespace Three_Dimensional
             }
 
             // Moving based on key presses (WASD)
-            if (theKeys[68])
+            if (theKeys[68]) // D
             {
-                p.x ++;
+                p.x -= Math.Sin((p.direction + 90) / rad2Deg) * 2;
+                p.y += Math.Cos((p.direction + 90) / rad2Deg) * 2;
             }
-            if (theKeys[65])
+            if (theKeys[65]) // A
             {
-                p.x--;
+                p.x += Math.Sin((p.direction + 90) / rad2Deg) * 2;
+                p.y -= Math.Cos((p.direction + 90) / rad2Deg) * 2;
             }
-            if (theKeys[83])
+            if (theKeys[83]) // W
             {
-                p.y++;
+                p.x += Math.Sin((p.direction) / rad2Deg) * 2;
+                p.y -= Math.Cos((p.direction) / rad2Deg) * 2;
             }
-            if (theKeys[87])
+            if (theKeys[87]) // S
             {
-                p.y--;
+                p.x -= Math.Sin((p.direction) / rad2Deg) * 2;
+                p.y += Math.Cos((p.direction) / rad2Deg) * 2;
             }
 
             // Refresh

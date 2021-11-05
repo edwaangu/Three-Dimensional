@@ -24,7 +24,6 @@ namespace Three_Dimensional
          * 
          * 
          * To Do Soon:
-         * - Proper WASD movement based on what view you're on
          * - Closeness of points based on a bulge from the player circle
          * - Fix offscreen issues in 3D
          * - Fix any bugs that I have not found yet
@@ -35,6 +34,11 @@ namespace Three_Dimensional
          * 
          * 
          * Version History:
+         * v1.04:
+         * - Fixed offscreen issues (For the most part, ceiling or floor planes will not work yet)
+         * - Saved a bunch of code and memory (probably)
+         * - Direction indicating with yellow line in 2D
+         * 
          * v1.03:
          * - Improved movement
          * - Better insights into position of thing
@@ -95,57 +99,20 @@ namespace Three_Dimensional
             return value;
         }
 
-        int shouldPointShow(double pDir, double minfov, double maxfov)
-        {
-            int should = -1;
-            if (pDir > minfov && pDir < maxfov) // In most cases this will be true (min and max fov are normal)
-            {
-                should = 0;
-            }
-            if (pDir > (minfov + 360) && pDir < (maxfov + 360)) // This shouldn't happen but it's a failsafe (Needs further testing
-            {
-                should = 1;
-            }
-            if (pDir > (minfov) && pDir < (maxfov + 360) && maxfov < minfov) // When maximum fov is less than minimum fov and maximum fov is less than -90 (sometimes)
-            {
-                should = 2;
-            }
-            if (pDir > (minfov - 360) && pDir < (maxfov) && maxfov < minfov) // When maximum fov is less than minium fov and minimum fov needs to be reduced by an entire cycle (happens often, usually when on the opposite side)
-            {
-                should = 3;
-            }
-            return should;
-        }
-
-        double whereInFov(int should, double pDir, double minfov, double maxfov)
+        double whereInFov(double pDir, double distAway, double playerDir)
         {
             double whereShould = 0;
-            if(should >= 0)
+
+            whereShould = (pDir - playerDir);
+            if(Math.Abs(whereShould) > Math.Abs(whereShould - 360))
             {
-                // 'should' is explained in shouldPointShow function
-                if(should == 0)
-                {
-                    whereShould = (pDir - minfov) / fov - 1;
-                }
-                else if(should == 1)
-                {
-                    whereShould = (pDir - (minfov + 360)) / fov - 1;
-                }
-                else if(should == 2)
-                {
-                    whereShould = (pDir - minfov) / fov - 1;
-                }
-                else if (should == 3)
-                {
-                    whereShould = (pDir - (minfov - 360)) / fov - 1;
-                }
+                whereShould -= 360;
             }
-            else
+            if (Math.Abs(whereShould) > Math.Abs(whereShould + 360))
             {
-                // Needs to be updated because it causes weird issues
-                whereShould = pDir > maxfov ? (1) : (-1);
+                whereShould += 360;
             }
-            return -whereShould;
+            return -whereShould / fov;
         }
 
         public GameScreen()
@@ -199,8 +166,10 @@ namespace Three_Dimensional
                         double dirFromPoint = directionFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate direction from point
                         double distFromPoint = distanceFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate distance from point
 
+                        double whereFov = whereInFov(dirFromPoint * rad2Deg, distFromPoint, -p.direction); // FOV
+
                         // Calculate whether the point should be showing based on the player's fov
-                        bool shouldBeShowing = shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov) != -1 ? true : false;
+                        bool shouldBeShowing = Math.Abs(whereFov) <= 1 ? true : false;
 
                         // Draw a line based on the direction of player and point
                         e.Graphics.DrawLine(new Pen(Color.Red), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x) + Convert.ToSingle(zapdist * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(zapdist * Math.Cos(dirFromPoint)));
@@ -210,7 +179,7 @@ namespace Three_Dimensional
 
                         // Draw text displaying the direction of player and point
                         //e.Graphics.DrawString($"{dirFromPoint * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
-                        e.Graphics.DrawString($"{shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov)}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
+                        e.Graphics.DrawString($"{whereInFov(dirFromPoint * rad2Deg, dirFromPoint, -p.direction)} : : {dirFromPoint * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.y) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
                     }
                 }
 
@@ -218,9 +187,14 @@ namespace Three_Dimensional
                 e.Graphics.DrawLine(new Pen(Color.DarkBlue, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x + zapdist * Math.Sin((-fov - p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((-fov - p.direction) / rad2Deg))); // Minimum FOV Line
                 e.Graphics.DrawLine(new Pen(Color.Blue, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x + zapdist * Math.Sin((fov - p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((fov - p.direction) / rad2Deg))); // Maximum FOV Line
 
+
+                e.Graphics.DrawLine(new Pen(Color.Yellow, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.y), Convert.ToSingle(p.x + zapdist * Math.Sin((-p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((-p.direction) / rad2Deg))); // Dir Line
+
                 // FOV Text
                 e.Graphics.DrawString($"{minfov}", DefaultFont, new SolidBrush(Color.DarkBlue), Convert.ToSingle(p.x + zapdist * Math.Sin((-fov - p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((-fov - p.direction) / rad2Deg))); // Minimum FOV
                 e.Graphics.DrawString($"{maxfov}", DefaultFont, new SolidBrush(Color.Blue), Convert.ToSingle(p.x + zapdist * Math.Sin((fov - p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((fov - p.direction) / rad2Deg))); // Maximum FOV
+
+                e.Graphics.DrawString($"{-p.direction}", DefaultFont, new SolidBrush(Color.Yellow), Convert.ToSingle(p.x + zapdist * Math.Sin((-p.direction) / rad2Deg)), Convert.ToSingle(p.y + zapdist * Math.Cos((-p.direction) / rad2Deg)));
 
                 // Finish Transform back to 0, 0
                 e.Graphics.ResetTransform();
@@ -247,16 +221,16 @@ namespace Three_Dimensional
                         double dirFromPoint = directionFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate direction from point
                         double distFromPoint = distanceFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate distance from point
 
-                        // Calculate where the point should be positioned on the 3d screen
-                        int theMode = shouldPointShow(dirFromPoint * rad2Deg, minfov, maxfov);
+                        double whereFov = whereInFov(dirFromPoint * rad2Deg, distFromPoint, -p.direction);
 
-                        if(theMode != -1)
+                        // Calculate where the point should be positioned on the 3d screen
+                        if (Math.Abs(whereFov) <= 1)
                         {
                             shouldShow = true;
                         }
 
                         // Position the updated point based on theMode, dirFromPoint, distFromPoint, and Z Coordinate of point (X-Y Axis, Z - up)
-                        newPs[i] = new PointF(Convert.ToSingle(whereInFov(theMode, dirFromPoint * rad2Deg, minfov, maxfov)) * 450, -Convert.ToSingle((600 / (distFromPoint == 0 ? 0.001 : distFromPoint)) * pl.plist[i].z));
+                        newPs[i] = new PointF(Convert.ToSingle(whereFov) * 450, -Convert.ToSingle((600 / (distFromPoint == 0 ? 0.001 : distFromPoint)) * pl.plist[i].z));
                     }
 
                     if (shouldShow)
@@ -295,6 +269,15 @@ namespace Three_Dimensional
             else if (theKeys[37])
             {
                 p.direction--;
+            }
+
+            if(p.direction >= 90)
+            {
+                p.direction -= 360;
+            }
+            if(p.direction < -270)
+            {
+                p.direction += 360;
             }
 
             // Moving based on key presses (WASD)

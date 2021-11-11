@@ -22,22 +22,20 @@ namespace Three_Dimensional
          * - Display 2D top down mode with many lines
          * - Basic 3D mode
          * 
-         * 
-         * To Do Soon:
-         * - Closeness of points based on a bulge from the player circle
-         * - Don't show only if beyond 90 fov
-         * - Fix any bugs that I have not found yet
-         * 
-         * To Do FAR IN THE FUTURE:
-         * - Player Z Coordinate
-         * - Two Direction Axises (Similar to Minecraft)
-         * 
+         * Current Bugs:
+         * - Stretches WAY too much near the edges, right idea though
+         * - Buggy using up and down arrows to change that direction
+         * - Odd visual issues
+         * - Does not stretch at all in the Z-Direction
          * 
          * Version History:
          * 
+         * v1.0.5b: (Will go to 1.0.5c)
+         * - Beta Z Axis (Plenty of issues but a possible working version)
+         * - Bug fixes
+         * 
          * v1.0.5a:
          * - Very very very alpha Z Axis (Needs input from XY)
-         * 
          * 
          * v1.0.4:
          * - Fixed offscreen issues (For the most part, ceiling or floor planes will not work yet)
@@ -78,7 +76,7 @@ namespace Three_Dimensional
 
         // Player related variables
         Player p = new Player(-20, 100, 0, new PointF(-90, -90));
-        PointF fov = new PointF(40, 30);
+        PointF fov = new PointF(50, 33);
 
         // Object related variables
         List<Plane3> planes = new List<Plane3>();
@@ -159,48 +157,49 @@ namespace Three_Dimensional
                 e.Graphics.TranslateTransform(450, 300);
 
                 // Player
-                e.Graphics.FillEllipse(new SolidBrush(Color.Black), -5 + Convert.ToSingle(p.x), -5 + Convert.ToSingle(p.z), 10, 10);
+                e.Graphics.FillEllipse(new SolidBrush(Color.Black), -5, -5, 10, 10);
 
                 // Planes
                 foreach (Plane3 pl in planes)
                 {
-
-                    e.Graphics.DrawPolygon(new Pen(Color.Black), new PointF[] { new PointF(pl.plist[0].x, pl.plist[0].z), new PointF(pl.plist[1].x, pl.plist[1].z), new PointF(pl.plist[2].x, pl.plist[2].z), new PointF(pl.plist[3].x, pl.plist[3].z) });
-                    e.Graphics.FillPolygon(new SolidBrush(Color.Gray), new PointF[] { new PointF(pl.plist[0].x, pl.plist[0].z), new PointF(pl.plist[1].x, pl.plist[1].z), new PointF(pl.plist[2].x, pl.plist[2].z), new PointF(pl.plist[3].x, pl.plist[3].z) });
+                    PointF[] _plist = new PointF[4];
 
                     // Calculate Lines
                     for (int i = 0; i < pl.plist.Count(); i++)
                     {
                         // Calculate Distance and Direction from point
-                        double dirFromPoint = directionFromPoint(p.x, p.z, pl.plist[i].x, pl.plist[i].z); // Calculate direction from point
-                        double distFromPoint = distanceFromPoint(p.x, p.z, pl.plist[i].x, pl.plist[i].z); // Calculate distance from point
+                        double dirFromPointA = directionFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate direction from point
+                        double distFromPointA = distanceFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate distance from point
 
-                        double whereFov = whereInFov(dirFromPoint * rad2Deg, distFromPoint, -p.direction.Y, fov.Y); // FOV
+                        double whereFovA = whereInFov(dirFromPointA * rad2Deg, distFromPointA, -p.direction.X, fov.X); // FOV
 
-                        // Calculate whether the point should be showing based on the player's fov
-                        bool shouldBeShowing = Math.Abs(whereFov) <= 1 ? true : false;
+                        _plist[i] = new PointF(Convert.ToSingle(distFromPointA * (1 - Math.Abs(whereFovA))), Convert.ToSingle(pl.plist[i].z + p.z));
 
-                        // Draw a line based on the direction of player and point
-                        e.Graphics.DrawLine(new Pen(Color.Red), Convert.ToSingle(p.x), Convert.ToSingle(p.z), Convert.ToSingle(p.x) + Convert.ToSingle(zapdist * Math.Sin(dirFromPoint)), Convert.ToSingle(p.z) + Convert.ToSingle(zapdist * Math.Cos(dirFromPoint)));
+
+                        double dirFromPointB = directionFromPoint(0, 0, _plist[i].X, _plist[i].Y); // Calculate direction from point
+                        double distFromPointB = distanceFromPoint(0, 0, _plist[i].X, _plist[i].Y); // Calculate distance from point
+
+                        double whereFovB = whereInFov(dirFromPointB * rad2Deg, distFromPointB, -p.direction.Y, fov.Y);
+
+                        // Draw a line based on the dir of player and point
+                        e.Graphics.DrawLine(new Pen(Color.Red), 0, 0, Convert.ToSingle(zapdist * Math.Sin(dirFromPointB)), Convert.ToSingle(zapdist * Math.Cos(dirFromPointB)));
 
                         // Draw a line based on the distance of player and point
-                        e.Graphics.DrawLine(new Pen(shouldBeShowing ? Color.LimeGreen : Color.DarkRed), Convert.ToSingle(p.x), Convert.ToSingle(p.z), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.z) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
-                        e.Graphics.DrawString($"{whereInFov(dirFromPoint * rad2Deg, dirFromPoint, -p.direction.Y, fov.Y)} : : {dirFromPoint * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(p.x) + Convert.ToSingle(distFromPoint * Math.Sin(dirFromPoint)), Convert.ToSingle(p.z) + Convert.ToSingle(distFromPoint * Math.Cos(dirFromPoint)));
+                        e.Graphics.DrawLine(new Pen(Color.LimeGreen), 0, 0, Convert.ToSingle(distFromPointB * Math.Sin(dirFromPointB)), Convert.ToSingle(distFromPointB * Math.Cos(dirFromPointB)));
+
+                        e.Graphics.DrawString($"{whereFovB} : : {dirFromPointB * rad2Deg}", DefaultFont, new SolidBrush(Color.Red), Convert.ToSingle(zapdist * Math.Sin(dirFromPointB)), Convert.ToSingle(zapdist * Math.Cos(dirFromPointB)));
                     }
+
+                    e.Graphics.DrawPolygon(new Pen(Color.Black), _plist);
+                    e.Graphics.FillPolygon(new SolidBrush(Color.Gray), _plist);
                 }
 
                 // FOV Lines
-                e.Graphics.DrawLine(new Pen(Color.DarkBlue, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.z), Convert.ToSingle(p.x + zapdist * Math.Sin((-fov.Y - p.direction.Y) / rad2Deg)), Convert.ToSingle(p.z + zapdist * Math.Cos((-fov.Y - p.direction.Y) / rad2Deg))); // Minimum FOV Line
-                e.Graphics.DrawLine(new Pen(Color.Blue, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.z), Convert.ToSingle(p.x + zapdist * Math.Sin((fov.Y - p.direction.Y) / rad2Deg)), Convert.ToSingle(p.z + zapdist * Math.Cos((fov.Y - p.direction.Y) / rad2Deg))); // Maximum FOV Line
+                e.Graphics.DrawLine(new Pen(Color.DarkBlue, 1), 0, 0, Convert.ToSingle(zapdist * Math.Sin((-fov.Y - p.direction.Y) / rad2Deg)), Convert.ToSingle(zapdist * Math.Cos((-fov.Y - p.direction.Y) / rad2Deg))); // Minimum FOV Line
+                e.Graphics.DrawLine(new Pen(Color.Blue, 1), 0, 0, Convert.ToSingle(zapdist * Math.Sin((fov.Y - p.direction.Y) / rad2Deg)), Convert.ToSingle(zapdist * Math.Cos((fov.Y - p.direction.Y) / rad2Deg))); // Maximum FOV Line
 
 
-                e.Graphics.DrawLine(new Pen(Color.Yellow, 1), Convert.ToSingle(p.x), Convert.ToSingle(p.z), Convert.ToSingle(p.x + zapdist * Math.Sin((-p.direction.Y) / rad2Deg)), Convert.ToSingle(p.z + zapdist * Math.Cos((-p.direction.Y) / rad2Deg))); // Dir Line
-
-                // FOV Text
-                e.Graphics.DrawString($"{minfovY}", DefaultFont, new SolidBrush(Color.DarkBlue), Convert.ToSingle(p.x + zapdist * Math.Sin((-fov.Y - p.direction.Y) / rad2Deg)), Convert.ToSingle(p.z + zapdist * Math.Cos((-fov.Y - p.direction.Y) / rad2Deg))); // Minimum FOV
-                e.Graphics.DrawString($"{maxfovY}", DefaultFont, new SolidBrush(Color.Blue), Convert.ToSingle(p.x + zapdist * Math.Sin((fov.Y - p.direction.Y) / rad2Deg)), Convert.ToSingle(p.z + zapdist * Math.Cos((fov.Y - p.direction.Y) / rad2Deg))); // Maximum FOV
-
-                e.Graphics.DrawString($"{-p.direction.Y}", DefaultFont, new SolidBrush(Color.Yellow), Convert.ToSingle(p.x + zapdist * Math.Sin((-p.direction.Y) / rad2Deg)), Convert.ToSingle(p.z + zapdist * Math.Cos((-p.direction.Y) / rad2Deg)));
+                e.Graphics.DrawLine(new Pen(Color.Orange, 1), 0, 0, Convert.ToSingle(zapdist * Math.Sin((-p.direction.Y) / rad2Deg)), Convert.ToSingle(zapdist * Math.Cos((-p.direction.Y) / rad2Deg))); // Dir Line
 
                 // Finish Transform back to 0, 0
                 e.Graphics.ResetTransform();
@@ -285,14 +284,20 @@ namespace Three_Dimensional
                         double distFromPointX = distanceFromPoint(p.x, p.y, pl.plist[i].x, pl.plist[i].y); // Calculate distance from point
 
 
-                        double dirFromPointZ = directionFromPoint(p.x, p.z, pl.plist[i].x, pl.plist[i].z); // Calculate direction from point
-                        double distFromPointZ = distanceFromPoint(p.x, p.z, pl.plist[i].x, pl.plist[i].z); // Calculate distance from point
+                        //double dirFromPointZ = directionFromPoint(p.x, p.z, pl.plist[i].x, pl.plist[i].z); // Calculate direction from point
+                        //double distFromPointZ = distanceFromPoint(p.x, p.z, pl.plist[i].x, pl.plist[i].z); // Calculate distance from point
 
                         double whereFovX = whereInFov(dirFromPointX * rad2Deg, distFromPointX, -p.direction.X, fov.X);
+                        //double whereFovZ = whereInFov(dirFromPointZ * rad2Deg, distFromPointZ, -p.direction.Y, fov.Y);
+
+
+                        double dirFromPointZ = directionFromPoint(0, 0, Convert.ToSingle(distFromPointX * (1 - Math.Abs(whereFovX))), Convert.ToSingle(pl.plist[i].z + p.z)); // Calculate direction from point
+                        double distFromPointZ = distanceFromPoint(0, 0, Convert.ToSingle(distFromPointX * (1 - Math.Abs(whereFovX))), Convert.ToSingle(pl.plist[i].z + p.z)); // Calculate distance from point
+
                         double whereFovZ = whereInFov(dirFromPointZ * rad2Deg, distFromPointZ, -p.direction.Y, fov.Y);
 
                         // Calculate where the point should be positioned on the 3d screen
-                        if (Math.Abs(whereFovX) <= 1 && Math.Abs(whereFovZ) <= 1)
+                        if (Math.Abs(whereFovX) <= 1)
                         {
                             shouldShow = true;
                         }
